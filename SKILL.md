@@ -1,5 +1,7 @@
 ---
 name: 大模型token成本节约
+slug: llm-token-compressor
+displayName: 大模型token成本节约
 description: "大模型 Token 成本节约工具。在请求到达大模型之前自动压缩 prompt 和上下文，减少 60-95% 的 token 消耗，直接降低 API 成本。支持 Claude/OpenAI/Gemini 等主流模型，提供代理模式、CLI 包装、Python SDK 和 MCP Server 四种接入方式。适用于所有需要降低大模型 API 开销的 Agent 和应用。基于开源项目 headroom（https://github.com/chopratejas/headroom，MIT License）封装，已注明来源与许可证。"
 agent_created: true
 ---
@@ -136,17 +138,32 @@ headroom 内部使用 6 种算法，自动选择最优策略：
 | 0.4 | ~54% | 平衡，日常使用推荐 |
 | 0.2 | ~75% | 激进，上下文很大时使用 |
 
-## 性能监控
+## 性能监控与节省可视化
+
+运行以下命令后，告诉用户具体省了多少 token、折合多少钱：
 
 ```bash
-# 查看压缩节省量
+# 查看压缩节省量（解析后生成对比报告）
 headroom perf
 
 # 查看输出 token 节省
 headroom output-savings
 
-# 审计 Read 操作占比
+# 审计 Read 操作占比（通常是最大压缩来源）
 headroom audit-reads
+```
+
+**使用建议**：让 Agent 在运行 `headroom perf` 后解析输出，以下面格式汇报：
+
+```
+📊 压缩效果报告（最近对话统计）
+─────────────────────────────────
+原始 tokens：  约 XX,XXX
+压缩后 tokens：约 XX,XXX
+节省比例：     XX%
+按 Claude Sonnet 定价估算节省：约 ¥X.XX
+─────────────────────────────────
+建议：当前 target_ratio=0.4，可调至 0.2 进一步压缩
 ```
 
 ## 学习模式
@@ -161,11 +178,65 @@ headroom learn --verbosity
 headroom learn --verbosity --apply
 ```
 
+## 一键安装（推荐）
+
+不想手动配置？一行命令完成安装+验证：
+
+```bash
+bash <(curl -sSL https://raw.githubusercontent.com/guipi888/workbuddy-llm-token-compressor/master/scripts/install_and_verify.sh)
+```
+
+脚本自动执行：检测 Python 版本 → pip install → headroom doctor → 展示可用后端 + 快速接入命令。
+
+**或本地运行**（已 clone 仓库的情况）：
+
+```bash
+bash scripts/install_and_verify.sh
+```
+
 ## 系统要求
 
-- Python 3.10+
-- 首次运行需下载 ONNX Runtime 和 Kompress-base 模型（约 200MB）
+- **Python 3.10+**（必须）
+- 首次运行会自动下载 ONNX Runtime 和 Kompress-base 模型（**约 200MB**），需要网络连接，建议在 WiFi 环境下执行
 - 支持 macOS / Linux / Windows
+- 企业内网环境请参考下方「企业内网适配」章节
+
+## 企业内网适配
+
+企业环境常见问题及解决方案：
+
+### 问题1：SSL 证书验证失败
+
+```bash
+# 配置企业 CA 证书
+export REQUESTS_CA_BUNDLE=/path/to/your-ca-bundle.pem
+export SSL_CERT_FILE=/path/to/your-ca-bundle.pem
+pip install "headroom-ai[all]"
+
+# 或使用预构建 wheel（跳过 Rust 编译）
+pip install --only-binary headroom-ai "headroom-ai[all]"
+```
+
+### 问题2：HuggingFace 模型下载失败
+
+```bash
+# 使用国内镜像
+export HF_ENDPOINT=https://hf-mirror.com
+
+# 或已下载过模型则直接离线模式
+export HF_HUB_OFFLINE=1
+```
+
+### 问题3：企业 HTTP 代理环境
+
+```bash
+# 设置企业出口代理（headroom 下载模型时使用）
+export HTTPS_PROXY=http://your-corp-proxy:8080
+
+# headroom 自身的代理端口与之互不冲突
+headroom proxy --port 8787
+export ANTHROPIC_BASE_URL=http://localhost:8787
+```
 
 ## 安装故障排除
 
@@ -228,7 +299,12 @@ export HEADROOM_EMBEDDER_RUNTIME=pytorch_mps
 
 ## 注意事项
 
-- 首次运行会下载模型（约 200MB），需要网络连接
+- 首次运行会下载模型（约 200MB），需要网络连接；企业内网见上方「企业内网适配」
+- **压缩质量说明**：headroom 采用双重保障机制：
+  - CacheAligner 保证压缩后前缀缓存仍有效（不增加 KV cache miss）
+  - CCR 可逆压缩：原始内容存入本地 SQLite，可通过 `headroom_retrieve` 随时还原
+  - 实测数据：Claude Opus 级模型代码审查任务 A/B 对照（31.7% token 压缩），回答质量无统计显著差异
+  - 保守使用建议：从 `HEADROOM_TARGET_RATIO=0.6`（~18% 压缩）起步，观察质量后逐步调低
 - 压缩是可逆的：CCR 缓存原始内容，可通过 `headroom_retrieve` 按需检索
 - 前缀缓存安全：压缩后的字节与原始字节 SHA-256 校验一致，不影响 KV 缓存命中
 - 输出压缩默认关闭，需 `HEADROOM_OUTPUT_SHAPER=1` 手动开启
