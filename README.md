@@ -1,6 +1,8 @@
 # 大模型Token成本节约 · WorkBuddy Skill
 
-"大模型 Token 成本节约工具。在请求到达大模型之前自动压缩 prompt 和上下文，减少 60-95% 的 token 消耗，直接降低 API 成本。支持 Claude/OpenAI/Gemini 等主流模型，提供代理模式、CLI 包装、Python SDK 和 MCP Server 四种接入方式。适用于所有需要降低大模型 API 开销的 Agent 和应用。基于开源项目 headroom（https://github.com/chopratejas/headroom，MIT License）封装，已注明来源与许可证。"
+> 本技能是对开源项目 [headroom](https://github.com/chopratejas/headroom)（by **chopratejas**，MIT License）的 WorkBuddy Skill 封装。所有核心压缩能力来自 headroom 项目，本仓库仅提供封装层和使用说明。
+
+"大模型 Token 成本节约工具。在请求到达大模型之前自动压缩 prompt 和上下文，减少 60-95% 的 token 消耗，直接降低 API 成本。支持 Claude/OpenAI/Gemini 等主流模型，提供代理模式、CLI 包装、Python SDK 和 MCP Server 四种接入方式。"
 
 ## 特性
 
@@ -50,10 +52,12 @@ scripts
 
 ## 作者
 
-**guipi888**
-
+**Wrapper by guipi888**（[桂皮AI实战](https://github.com/guipi888)）
+**Original project by chopratejas**（[headroom](https://github.com/chopratejas/headroom)）
 
 
 ## License
 
 MIT License — 详见 [LICENSE](./LICENSE)
+
+原项目 headroom 版权归 chopratejas 所有，本封装遵循相同的 MIT 协议。
