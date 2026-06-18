@@ -2,7 +2,8 @@
 name: 大模型token成本节约
 slug: llm-token-compressor
 displayName: 大模型token成本节约
-description: "大模型 Token 成本节约工具。在请求到达大模型之前自动压缩 prompt 和上下文，减少 60-95% 的 token 消耗，直接降低 API 成本。支持 Claude/OpenAI/Gemini 等主流模型，提供代理模式、CLI 包装、Python SDK 和 MCP Server 四种接入方式。适用于所有需要降低大模型 API 开销的 Agent 和应用。基于开源项目 headroom（https://github.com/chopratejas/headroom，MIT License）封装，已注明来源与许可证。"
+version: "1.1.0"
+description: "大模型 Token 成本节约工具。在请求到达大模型之前自动压缩 prompt 和上下文，减少 60-95% 的 token 消耗，直接降低 API 成本。支持 Claude/OpenAI/Gemini 等主流模型，提供代理模式、CLI 包装、Python SDK 和 MCP Server 四种接入方式。内置一键安装脚本、企业内网适配方案和压缩效果对比报告。基于开源项目 headroom（https://github.com/chopratejas/headroom，MIT License）封装，已注明来源与许可证。"
 agent_created: true
 ---
 
