@@ -2,8 +2,11 @@
 name: 大模型token成本节约
 slug: llm-token-compressor
 displayName: 大模型token成本节约
-version: "1.4.0"
-description: "大模型 Token 成本节约工具。在请求到达大模型之前自动压缩 prompt 和上下文，减少 60-95% 的 token 消耗，直接降低 API 成本。支持 Claude/OpenAI/Gemini 等主流模型，提供代理模式、CLI 包装、Python SDK 和 MCP Server 四种接入方式。内置一键安装脚本、企业内网适配方案和压缩效果对比报告。基于开源项目 headroom（https://github.com/chopratejas/headroom，MIT License）封装，已注明来源与许可证。"
+version: "1.5.0"
+description: "大模型 Token 成本节约工具。在请求到达大模型之前自动压缩 prompt 和上下文，减少 60-95% 的 token 消耗，直接降低 API 成本。支持 Claude/OpenAI/Gemini 等主流模型，提供代理模式、CLI 包装、Python SDK 和 MCP Server 四种接入方式。内置一键安装脚本、企业内网适配方案、压缩效果对比报告，以及可选的数据上报功能（可随时关闭，首次使用引导用户选择）。基于开源项目 headroom（https://github.com/chopratejas/headroom，MIT License）封装，已注明来源与许可证。"
+xiaping_trigger: ["token压缩", "降低API成本", "LLM优化", "减少token消耗", "省钱", "token优化", "headroom"]
+xiaping_category: ["效率工具"]
+xiaping_tags: ["AI", "token", "成本优化", "LLM", "压缩", "headroom"]
 agent_created: true
 ---
 
@@ -407,46 +410,72 @@ export HEADROOM_EMBEDDER_RUNTIME=pytorch_mps
 
 ## 执行流程
 
+> **重要**：以下所有场景在执行前，Agent 必须先确认数据上报配置状态。如果是首次使用，必须先执行「数据上报功能」章节中的选择流程。
+
 ### 首次安装流程（强制）
 
 1. **问候用户，介绍本技能**
-2. **询问是否启用云端数据看板**：
-   > "本技能支持云端数据看板，可以在 https://mrkjai.com/tools/headroom-dashboard 实时查看你的节省情况。是否启用？（启用后需要你提供 API Key）"
-3. **如果用户同意**：
+2. **询问是否启用数据上报**（必须让用户选择，不可跳过）：
+
+   Agent 展示以下信息并等待用户选择：
+
+   ```
+   📊 headroom 支持将 token 压缩节省数据上报到在线仪表盘，
+      帮你可视化跟踪节省效果。
+
+      • 只上报统计数据（token 数量/模型名/压缩率/节省金额）
+      • 不上报任何对话内容或 prompt 原文
+      • 可随时通过命令关闭
+
+   请选择：
+     [1] 启用数据上报（推荐）
+     [2] 暂不启用，后续可随时开启
+   ```
+
+3. **如果用户选择启用**：
    - 引导用户访问 https://mrkjai.com/tools/headroom-dashboard
    - 用户登录后从页面（或 `/settings/integrations`）复制 API Key（`opc_user_xxx`）
    - 用户把 Key 提供给 AI
    - AI 执行：把 `export MRKJAI_API_KEY="opc_user_xxx"` 追加到 `~/.zshrc` 或 `~/.bashrc`
+   - 同时运行 `python scripts/opc_headroom_reporter.py init` 初始化上报配置
    - 验证：执行 `source ~/.zshrc && echo $MRKJAI_API_KEY`，确认非空
-4. **如果用户不同意**：跳过，不影响技能正常使用
+4. **如果用户选择不启用**：跳过，不影响技能正常使用。告知用户后续可通过 `python scripts/opc_headroom_reporter.py enable` 随时开启
 5. **后续每次压缩**：自动调用上报脚本，实时同步数据到看板
 
 ### 场景A：用户想降低 Claude Code 的 token 消耗
 
-1. 确认用户使用 Claude Code（或其他编码 Agent）
-2. 执行 `pip install "headroom-ai[all]"`
-3. 执行 `headroom wrap claude`（或 codex/aider/cursor）
-4. 告知用户压缩已生效，可通过 `headroom perf` 查看节省量
+1. **确认数据上报配置**（首次使用时询问用户是否启用数据上报）
+2. 确认用户使用 Claude Code（或其他编码 Agent）
+3. 执行 `pip install "headroom-ai[all]"`
+4. 执行 `headroom wrap claude`（或 codex/aider/cursor）
+5. 告知用户压缩已生效，可通过 `headroom perf` 查看节省量
+6. **如果用户已启用数据上报**：运行 `headroom perf` 后自动上报节省数据
 
 ### 场景B：用户想在 Python 应用中压缩 token
 
-1. 执行 `pip install "headroom-ai[all]"`
-2. 在代码中 `from headroom import compress`
-3. 调用 `compress(messages, model="模型名")` 压缩后再发给 LLM
-4. 可选：设置 `HEADROOM_TARGET_RATIO=0.4` 控制压缩比例
+1. **确认数据上报配置**（首次使用时询问用户是否启用数据上报）
+2. 执行 `pip install "headroom-ai[all]"`
+3. 在代码中 `from headroom import compress`
+4. 调用 `compress(messages, model="模型名")` 压缩后再发给 LLM
+5. 可选：设置 `HEADROOM_TARGET_RATIO=0.4` 控制压缩比例
+6. **如果用户已启用数据上报**：压缩后自动上报节省数据
 
 ### 场景C：用户想用代理模式（零代码改动）
 
-1. 执行 `pip install "headroom-ai[proxy]"`
-2. 执行 `headroom proxy --port 8787`
-3. 设置环境变量指向代理
-4. 所有 LLM 请求自动压缩
+1. **确认数据上报配置**（首次使用时询问用户是否启用数据上报）
+2. 执行 `pip install "headroom-ai[proxy]"`
+3. 执行 `headroom proxy --port 8787`
+4. 设置环境变量指向代理
+5. 所有 LLM 请求自动压缩
+6. **如果用户已启用数据上报**：运行 `headroom perf` 后自动上报节省数据
 
 ### 场景D：用户想接入 MCP
 
-1. 执行 `pip install "headroom-ai[mcp]"`
-2. 执行 `headroom mcp install`
-3. MCP 客户端自动获得 `headroom_compress` / `headroom_retrieve` / `headroom_stats` 工具
+1. **确认数据上报配置**（首次使用时询问用户是否启用数据上报）
+2. 执行 `pip install "headroom-ai[mcp]"`
+3. 执行 `headroom mcp install`
+4. MCP 客户端自动获得 `headroom_compress` / `headroom_retrieve` / `headroom_stats` 工具
+5. **如果用户已启用数据上报**：通过 `headroom_stats` 获取数据后自动上报
 
 ### 场景E：数据上报（自动）
 
@@ -457,6 +486,11 @@ export HEADROOM_EMBEDDER_RUNTIME=pytorch_mps
 3. 解析统计数据，组装上报 JSON
 4. POST 到 `https://mrkjai.com/api/ingest/headroom`
 5. 告知用户上报结果（成功/失败原因）
+
+### 场景F：用户只想管理数据上报设置
+
+1. 运行 `python scripts/opc_headroom_reporter.py status` 查看当前状态
+2. 根据用户需求执行 `enable` / `disable` / `set-key` / `flush` 等命令
 
 ## 注意事项
 
@@ -469,6 +503,37 @@ export HEADROOM_EMBEDDER_RUNTIME=pytorch_mps
 - 压缩是可逆的：CCR 缓存原始内容，可通过 `headroom_retrieve` 按需检索
 - 前缀缓存安全：压缩后的字节与原始字节 SHA-256 校验一致，不影响 KV 缓存命中
 - 输出压缩默认关闭，需 `HEADROOM_OUTPUT_SHAPER=1` 手动开启
+- **数据上报默认不启用**：必须由用户主动选择启用，可随时通过 `python scripts/opc_headroom_reporter.py disable` 关闭
+
+## 数据上报管理命令
+
+```bash
+REPORTER=scripts/opc_headroom_reporter.py
+
+# 查看上报状态
+python $REPORTER status
+
+# 启用 / 关闭上报
+python $REPORTER enable
+python $REPORTER disable
+
+# 设置 API Key
+python $REPORTER set-key opc_user_xxx
+
+# 上报单条数据
+python $REPORTER report \
+  --model "gpt-4o" \
+  --input 1500 --output 980 --saved 520 \
+  --rate 0.35 --cny 0.052
+
+# 立即 flush 缓冲区
+python $REPORTER flush
+
+# 设置缓冲区大小（默认 10 条）
+python $REPORTER set-buffer 20
+```
+
+配置文件位置：`~/.workbuddy/headroom_config.json`（存储上报开关、API Key、缓冲区大小）
 
 ## 参考文档
 
