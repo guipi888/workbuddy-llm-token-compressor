@@ -2,7 +2,7 @@
 name: 大模型token成本节约
 slug: llm-token-compressor
 displayName: 大模型token成本节约
-version: "1.2.0"
+version: "1.3.0"
 description: "大模型 Token 成本节约工具。在请求到达大模型之前自动压缩 prompt 和上下文，减少 60-95% 的 token 消耗，直接降低 API 成本。支持 Claude/OpenAI/Gemini 等主流模型，提供代理模式、CLI 包装、Python SDK 和 MCP Server 四种接入方式。内置一键安装脚本、企业内网适配方案和压缩效果对比报告。基于开源项目 headroom（https://github.com/chopratejas/headroom，MIT License）封装，已注明来源与许可证。"
 agent_created: true
 ---
@@ -208,6 +208,8 @@ headroom 内部使用 6 种算法，自动选择最优策略：
 | `HEADROOM_READ_MATURATION` | 0 | 设为 1 启用 Read Maturation |
 | `HEADROOM_CCR_BACKEND` | sqlite | 缓存后端（sqlite/memory） |
 | `HEADROOM_OUTPUT_HOLDOUT` | 0 | A/B 对照组比例（如 0.1 = 10% 不压缩） |
+| `MRKJAI_API_KEY` | None | 云端看板 API Key（opc_user_开头），启用数据上报时设置 |
+| `MRKJAI_API_BASE` | https://www.mrkjai.com | 云端看板服务器地址 |
 
 ### 压缩比例推荐
 
@@ -256,6 +258,78 @@ python scripts/headroom_dashboard.py --db /path/to/ccr.db --output dashboard.htm
 - 📉 压缩率趋势图（按时序）
 
 > 💡 建议将面板生成命令加入定时任务（如每周一次），追踪压缩效果变化趋势。
+
+### 方式三：云端数据上报与可视化看板（推荐 🆕）
+
+安装本技能后，你的压缩数据会自动上报到桂皮 AI 的云端看板，在浏览器中实时查看你的节省效果。
+
+#### 首次安装：获取 API Key
+
+安装时会自动询问你：
+
+> 是否启用云端数据看板？启用后，每次压缩数据会安全上报到 https://www.mrkjai.com/tools/headroom-dashboard，你可以随时在浏览器中查看自己的节省情况。
+
+如果你同意，AI 会引导你：
+1. 打开 https://www.mrkjai.com/tools/headroom-dashboard
+2. 登录后，在页面中复制你的 API Key（格式：`opc_user_` + 40 位 hex）
+3. 把 Key 提供给 AI，AI 会自动配置
+
+**或者手动获取**：登录 https://www.mrkjai.com → `/settings/integrations` → 复制 Key。
+
+#### 看板功能
+
+在 https://www.mrkjai.com/tools/headroom-dashboard 你可以看到：
+
+| 模块 | 内容 |
+|------|------|
+| 📊 KPI 卡片 | 累计节省 token / CNY / 压缩次数 / 平均压缩率 |
+| 📡 实时上报流 | 30 秒轮询，实时展示每次压缩效果 |
+| 📈 每日节省趋势 | 柱状图展示每日节省金额和 token 数 |
+| 📋 模型分布 | 各模型（Claude/GPT/Gemini 等）节省占比 |
+| 🏆 全球节省排行榜 | 所有用户的排名 + 你的排名高亮 |
+
+#### 上报方式
+
+数据通过 HTTPS 安全传输，每次压缩完成后自动上报。上报内容仅包含压缩统计数据，**不含你的对话内容或 prompt**。
+
+```bash
+# 单条上报
+curl -s -X POST https://www.mrkjai.com/api/ingest/headroom \
+  -H "X-API-Key: opc_user_你的40位hex" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "claude-sonnet-4",
+    "inputTokens": 2840,
+    "outputTokens": 1820,
+    "savedTokens": 1020,
+    "savedCny": 0.108,
+    "compressionRate": 0.36
+  }'
+```
+
+#### 自动上报脚本
+
+仓库中提供了 `scripts/headroom_upload.py`，可以在 `headroom perf` 后自动解析并上报：
+
+```bash
+# 自动解析 headroom perf 输出并上报
+headroom perf 2>&1 | python scripts/headroom_upload.py --model claude-sonnet-4 --pricing 0.015
+```
+
+脚本自动执行：
+1. 解析 `headroom perf` 输出，提取原始 token / 压缩后 token
+2. 计算节省 token 数和节省金额（CNY）
+3. 上报到 `https://www.mrkjai.com/api/ingest/headroom`
+4. 输出上报结果（成功 / 失败及原因）
+
+> 💡 建议将上报脚本加入你的自动化流程（如 `cron` 或定时任务），实现全自动数据追踪。
+
+#### 隐私说明
+
+- ✅ 仅上报**统计数据**（token 数、压缩率、模型名），不包含任何对话内容
+- ✅ 数据通过 HTTPS 加密传输
+- ✅ 你可以随时在 OPC 个人中心重置或撤销 API Key
+- ✅ 看板仅展示你自己的数据，不会泄露给其他用户
 
 **使用建议**：让 Agent 在运行 `headroom perf` 后解析输出，以下面格式汇报：
 
@@ -374,6 +448,19 @@ export HEADROOM_EMBEDDER_RUNTIME=pytorch_mps
 
 ## 执行流程
 
+### 首次安装流程（强制）
+
+1. **问候用户，介绍本技能**
+2. **询问是否启用云端数据看板**：
+   > "本技能支持云端数据看板，可以在 https://www.mrkjai.com/tools/headroom-dashboard 实时查看你的节省情况。是否启用？（启用后需要你提供 API Key）"
+3. **如果用户同意**：
+   - 引导用户访问 https://www.mrkjai.com/tools/headroom-dashboard
+   - 用户登录后从页面（或 `/settings/integrations`）复制 API Key（`opc_user_xxx`）
+   - 用户把 Key 提供给 AI
+   - AI 调用 `setup_wizard.py` 把 Key 写入 `~/.headroom/config.yaml` 或 `~/.bashrc`
+4. **如果用户不同意**：跳过，不影响技能正常使用
+5. **后续每次压缩**：自动调用上报脚本，实时同步数据到看板
+
 ### 场景A：用户想降低 Claude Code 的 token 消耗
 
 1. 确认用户使用 Claude Code（或其他编码 Agent）
@@ -400,6 +487,16 @@ export HEADROOM_EMBEDDER_RUNTIME=pytorch_mps
 1. 执行 `pip install "headroom-ai[mcp]"`
 2. 执行 `headroom mcp install`
 3. MCP 客户端自动获得 `headroom_compress` / `headroom_retrieve` / `headroom_stats` 工具
+
+### 场景E：数据上报（自动）
+
+每次压缩完成后，AI 会自动：
+
+1. 检查 `MRKJAI_API_KEY` 是否已配置
+2. 如果已配置，运行 `headroom perf` 获取统计数据
+3. 解析统计数据，组装上报 JSON
+4. POST 到 `https://www.mrkjai.com/api/ingest/headroom`
+5. 告知用户上报结果（成功/失败原因）
 
 ## 注意事项
 
