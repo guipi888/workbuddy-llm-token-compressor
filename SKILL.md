@@ -209,7 +209,7 @@ headroom 内部使用 6 种算法，自动选择最优策略：
 | `HEADROOM_CCR_BACKEND` | sqlite | 缓存后端（sqlite/memory） |
 | `HEADROOM_OUTPUT_HOLDOUT` | 0 | A/B 对照组比例（如 0.1 = 10% 不压缩） |
 | `MRKJAI_API_KEY` | None | 云端看板 API Key（opc_user_开头），启用数据上报时设置 |
-| `MRKJAI_API_BASE` | https://www.mrkjai.com | 云端看板服务器地址 |
+| `MRKJAI_API_BASE` | https://mrkjai.com | 云端看板服务器地址 |
 
 ### 压缩比例推荐
 
@@ -267,18 +267,18 @@ python scripts/headroom_dashboard.py --db /path/to/ccr.db --output dashboard.htm
 
 安装时会自动询问你：
 
-> 是否启用云端数据看板？启用后，每次压缩数据会安全上报到 https://www.mrkjai.com/tools/headroom-dashboard，你可以随时在浏览器中查看自己的节省情况。
+> 是否启用云端数据看板？启用后，每次压缩数据会安全上报到 https://mrkjai.com/tools/headroom-dashboard，你可以随时在浏览器中查看自己的节省情况。
 
 如果你同意，AI 会引导你：
-1. 打开 https://www.mrkjai.com/tools/headroom-dashboard
+1. 打开 https://mrkjai.com/tools/headroom-dashboard
 2. 登录后，在页面中复制你的 API Key（格式：`opc_user_` + 40 位 hex）
 3. 把 Key 提供给 AI，AI 会自动配置
 
-**或者手动获取**：登录 https://www.mrkjai.com → `/settings/integrations` → 复制 Key。
+**或者手动获取**：登录 https://mrkjai.com → `/settings/integrations` → 复制 Key。
 
 #### 看板功能
 
-在 https://www.mrkjai.com/tools/headroom-dashboard 你可以看到：
+在 https://mrkjai.com/tools/headroom-dashboard 你可以看到：
 
 | 模块 | 内容 |
 |------|------|
@@ -294,7 +294,7 @@ python scripts/headroom_dashboard.py --db /path/to/ccr.db --output dashboard.htm
 
 ```bash
 # 单条上报
-curl -s -X POST https://www.mrkjai.com/api/ingest/headroom \
+curl -s -X POST https://mrkjai.com/api/ingest/headroom \
   -H "X-API-Key: opc_user_你的40位hex" \
   -H "Content-Type: application/json" \
   -d '{
@@ -319,7 +319,7 @@ headroom perf 2>&1 | python scripts/headroom_upload.py --model claude-sonnet-4 -
 脚本自动执行：
 1. 解析 `headroom perf` 输出，提取原始 token / 压缩后 token
 2. 计算节省 token 数和节省金额（CNY）
-3. 上报到 `https://www.mrkjai.com/api/ingest/headroom`
+3. 上报到 `https://mrkjai.com/api/ingest/headroom`
 4. 输出上报结果（成功 / 失败及原因）
 
 > 💡 建议将上报脚本加入你的自动化流程（如 `cron` 或定时任务），实现全自动数据追踪。
@@ -452,9 +452,9 @@ export HEADROOM_EMBEDDER_RUNTIME=pytorch_mps
 
 1. **问候用户，介绍本技能**
 2. **询问是否启用云端数据看板**：
-   > "本技能支持云端数据看板，可以在 https://www.mrkjai.com/tools/headroom-dashboard 实时查看你的节省情况。是否启用？（启用后需要你提供 API Key）"
+   > "本技能支持云端数据看板，可以在 https://mrkjai.com/tools/headroom-dashboard 实时查看你的节省情况。是否启用？（启用后需要你提供 API Key）"
 3. **如果用户同意**：
-   - 引导用户访问 https://www.mrkjai.com/tools/headroom-dashboard
+   - 引导用户访问 https://mrkjai.com/tools/headroom-dashboard
    - 用户登录后从页面（或 `/settings/integrations`）复制 API Key（`opc_user_xxx`）
    - 用户把 Key 提供给 AI
    - AI 调用 `setup_wizard.py` 把 Key 写入 `~/.headroom/config.yaml` 或 `~/.bashrc`
@@ -495,7 +495,7 @@ export HEADROOM_EMBEDDER_RUNTIME=pytorch_mps
 1. 检查 `MRKJAI_API_KEY` 是否已配置
 2. 如果已配置，运行 `headroom perf` 获取统计数据
 3. 解析统计数据，组装上报 JSON
-4. POST 到 `https://www.mrkjai.com/api/ingest/headroom`
+4. POST 到 `https://mrkjai.com/api/ingest/headroom`
 5. 告知用户上报结果（成功/失败原因）
 
 ## 注意事项

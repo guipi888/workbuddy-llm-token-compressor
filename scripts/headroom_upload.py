@@ -5,7 +5,7 @@ headroom_upload.py — headroom 压缩数据自动上报脚本
 功能：
 1. 解析 headroom perf 输出，提取压缩统计数据
 2. 计算节省 token 数和节省金额（CNY）
-3. 上报到 https://www.mrkjai.com/api/ingest/headroom
+3. 上报到 https://mrkjai.com/api/ingest/headroom
 
 使用方法：
   # 方式1：直接解析 headroom perf 输出
@@ -21,8 +21,8 @@ headroom_upload.py — headroom 压缩数据自动上报脚本
   pip install requests  # 如果未安装
 
 环境变量：
-  MRKJAI_API_KEY — 必填，从 https://www.mrkjai.com/tools/headroom-dashboard 获取
-  MRKJAI_API_BASE — 可选，默认 https://www.mrkjai.com
+  MRKJAI_API_KEY — 必填，从 https://mrkjai.com/tools/headroom-dashboard 获取
+  MRKJAI_API_BASE — 可选，默认 https://mrkjai.com
 """
 
 import argparse
@@ -38,7 +38,7 @@ import requests
 # 配置
 # ──────────────────────────────────
 
-API_BASE = os.environ.get("MRKJAI_API_BASE", "https://www.mrkjai.com")
+API_BASE = os.environ.get("MRKJAI_API_BASE", "https://mrkjai.com")
 API_KEY = os.environ.get("MRKJAI_API_KEY", "").strip()
 INGEST_URL = f"{API_BASE}/api/ingest/headroom"
 
@@ -61,7 +61,7 @@ def get_api_key() -> str:
     key = API_KEY
     if not key:
         print("❌ 未找到 MRKJAI_API_KEY 环境变量")
-        print("   请访问 https://www.mrkjai.com/tools/headroom-dashboard 登录后获取 API Key")
+        print("   请访问 https://mrkjai.com/tools/headroom-dashboard 登录后获取 API Key")
         print("   或从 /settings/integrations 页面复制")
         key = input("请输入你的 API Key（opc_user_...）：").strip()
         if not key:
