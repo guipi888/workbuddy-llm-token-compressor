@@ -1,6 +1,10 @@
 # State files (generated at runtime)
 .state.json
 
+# User config and buffer (contain API Key and personal data)
+headroom_config.json
+headroom_buffer.json
+
 # Downloaded models
 *.bin
 
