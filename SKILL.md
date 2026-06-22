@@ -2,7 +2,7 @@
 name: 大模型token成本节约
 slug: llm-token-compressor
 displayName: 大模型token成本节约
-version: "1.5.0"
+version: "1.6.0"
 description: "大模型 Token 成本节约工具。在请求到达大模型之前自动压缩 prompt 和上下文，减少 60-95% 的 token 消耗，直接降低 API 成本。支持 Claude/OpenAI/Gemini 等主流模型，提供代理模式、CLI 包装、Python SDK 和 MCP Server 四种接入方式。内置一键安装脚本、企业内网适配方案、压缩效果对比报告，以及可选的数据上报功能（可随时关闭，首次使用引导用户选择）。基于开源项目 headroom（https://github.com/chopratejas/headroom，MIT License）封装，已注明来源与许可证。"
 xiaping_trigger: ["token压缩", "降低API成本", "LLM优化", "减少token消耗", "省钱", "token优化", "headroom"]
 xiaping_category: ["效率工具"]
@@ -221,15 +221,19 @@ python scripts/headroom_dashboard.py --db /path/to/ccr.db --output dashboard.htm
 
 > 💡 建议将面板生成命令加入定时任务（如每周一次），追踪压缩效果变化趋势。
 
-### 方式三：云端数据上报与可视化看板（推荐 🆕）
+### 方式三：云端数据上报与可视化看板（🆕 默认关闭，首次使用需选择启用）
 
-安装本技能后，你的压缩数据会自动上报到桂皮 AI 的云端看板，在浏览器中实时查看你的节省效果。
+> **⚠️ 数据透明度披露**：本功能会将 token 压缩统计数据发送到 mrkjai.com（外部服务器）。**默认关闭**，首次使用时必须由用户主动选择是否启用。
+
+安装本技能后，首次使用时 Agent 会询问你是否启用数据上报（三选项详见下方执行流程）。如果你选择启用，压缩数据会自动上报到桂皮 AI 的云端看板，在浏览器中实时查看你的节省效果。
 
 #### 首次安装：获取 API Key
 
 安装时会自动询问你：
 
 > 是否启用云端数据看板？启用后，每次压缩数据会安全上报到 https://mrkjai.com/tools/headroom-dashboard，你可以随时在浏览器中查看自己的节省情况。
+>
+> ⚠️ 透明度披露：数据目的地 mrkjai.com（外部服务器），只上报统计数据（不含对话内容），可随时关闭。请选择：[1] 启用 / [2] 禁用 / [3] 稍后配置
 
 如果你同意，AI 会引导你：
 1. 打开 https://mrkjai.com/tools/headroom-dashboard
@@ -420,16 +424,22 @@ export HEADROOM_EMBEDDER_RUNTIME=pytorch_mps
    Agent 展示以下信息并等待用户选择：
 
    ```
-   📊 headroom 支持将 token 压缩节省数据上报到在线仪表盘，
-      帮你可视化跟踪节省效果。
+   📊 数据上报配置选择
+   ─────────────────────────────────
 
+   本技能支持将 token 压缩节省数据上报到 mrkjai.com 在线仪表盘，
+   帮你可视化跟踪节省效果。
+
+   ⚠️ 透明度披露：
+      • 数据目的地：mrkjai.com（外部服务器）
       • 只上报统计数据（token 数量/模型名/压缩率/节省金额）
       • 不上报任何对话内容或 prompt 原文
       • 可随时通过命令关闭
 
    请选择：
-     [1] 启用数据上报（推荐）
-     [2] 暂不启用，后续可随时开启
+     [1] ✅ 启用数据上报（推荐）— 获取 API Key 后开启仪表盘可视化
+     [2] ❌ 禁用数据上报 — 不发送任何数据到外部，完全本地使用
+     [3] ⏳ 稍后配置 — 先用压缩功能，后续再决定上报
    ```
 
 3. **如果用户选择启用**：
@@ -439,8 +449,9 @@ export HEADROOM_EMBEDDER_RUNTIME=pytorch_mps
    - AI 执行：把 `export MRKJAI_API_KEY="opc_user_xxx"` 追加到 `~/.zshrc` 或 `~/.bashrc`
    - 同时运行 `python scripts/opc_headroom_reporter.py init` 初始化上报配置
    - 验证：执行 `source ~/.zshrc && echo $MRKJAI_API_KEY`，确认非空
-4. **如果用户选择不启用**：跳过，不影响技能正常使用。告知用户后续可通过 `python scripts/opc_headroom_reporter.py enable` 随时开启
-5. **后续每次压缩**：自动调用上报脚本，实时同步数据到看板
+4. **如果用户选择禁用**：告知用户所有压缩功能正常使用，不会发送任何数据到外部。后续可通过 `python scripts/opc_headroom_reporter.py enable` 随时开启
+5. **如果用户选择稍后配置**：告知用户数据上报默认关闭，压缩功能正常使用。后续可通过 `python scripts/opc_headroom_reporter.py init` 配置
+6. **后续每次压缩**：仅在用户已启用数据上报时自动调用上报脚本
 
 ### 场景A：用户想降低 Claude Code 的 token 消耗
 
@@ -503,7 +514,7 @@ export HEADROOM_EMBEDDER_RUNTIME=pytorch_mps
 - 压缩是可逆的：CCR 缓存原始内容，可通过 `headroom_retrieve` 按需检索
 - 前缀缓存安全：压缩后的字节与原始字节 SHA-256 校验一致，不影响 KV 缓存命中
 - 输出压缩默认关闭，需 `HEADROOM_OUTPUT_SHAPER=1` 手动开启
-- **数据上报默认不启用**：必须由用户主动选择启用，可随时通过 `python scripts/opc_headroom_reporter.py disable` 关闭
+- **数据上报默认关闭**：首次使用必须由用户主动选择（三选项：启用/禁用/稍后配置），配置文件和缓冲文件已加入 .gitignore 防止泄露，可随时通过 `python scripts/opc_headroom_reporter.py disable` 关闭
 
 ## 数据上报管理命令
 
@@ -541,3 +552,17 @@ python $REPORTER set-buffer 20
 - PyPI：https://pypi.org/project/headroom-ai/
 - npm：https://www.npmjs.com/package/headroom-ai
 - 详细 API 文档：见 `references/headroom_api.md`
+
+---
+
+## 📝 版本迭代记录
+
+| 版本 | 日期 | 更新内容摘要 | 操作人 |
+|------|------|------------|--------|
+| v1.0 | 2026-06-14 | 创建文档，封装 headroom 压缩功能 | Kyle |
+| v1.1 | 2026-06-15 | 添加中文场景实测数据、企业内网适配方案 | Kyle |
+| v1.2 | 2026-06-22 | 新增数据上报功能（可选启用/关闭）、API Key 引导流程、Python 上报客户端脚本 | Kyle |
+| v1.3 | 2026-06-22 | 数据上报功能升级：云端看板、上报脚本、环境变量配置 | Kyle |
+| v1.4 | 2026-06-22 | 审核问题修复、域名统一 mrkjai.com | Kyle |
+| v1.5 | 2026-06-22 | 数据上报功能完善、添加自行验证步骤和推荐配置 | Kyle |
+| v1.6 | 2026-06-23 | 安全审计修复：数据上报默认关闭(enabled=False)、三选项透明度披露、配置/缓冲文件加入.gitignore | Kyle |

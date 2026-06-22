@@ -48,7 +48,7 @@ API_ENDPOINT = "https://www.mrkjai.com/api/ingest/headroom"
 BUFFER_PATH = os.path.expanduser("~/.workbuddy/headroom_buffer.json")
 
 DEFAULT_CONFIG = {
-    "enabled": True,
+    "enabled": False,  # 默认关闭，首次使用必须让用户选择是否启用
     "api_key": "",
     "buffer_size": 10,
 }
