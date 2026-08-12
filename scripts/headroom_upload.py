@@ -62,7 +62,7 @@ def get_api_key() -> str:
     if not key:
         print("❌ 未找到 MRKJAI_API_KEY 环境变量")
         print("   请访问 https://mrkjai.com/tools/headroom-dashboard 登录后获取 API Key")
-        print("   或从 /settings/integrations 页面复制")
+        print("   或从「个人中心/账户设置」的「个人集成」页面复制")
         key = input("请输入你的 API Key（opc_user_...）：").strip()
         if not key:
             print("❌ API Key 不能为空，上报已取消")

@@ -30,13 +30,56 @@ from typing import Optional
 # ─────────────────────────────────────────
 
 DEFAULT_PRICING = {
-    "claude-sonnet-4": 0.015,   # $/1K input tokens
+    # Claude
+    "claude-sonnet-4": 0.015,
     "claude-opus-4": 0.075,
     "claude-haiku-4": 0.005,
+    "claude-3-5-sonnet": 0.015,
+    "claude-3-opus": 0.075,
+    "claude-3-haiku": 0.0025,
+    # OpenAI
     "gpt-4o": 0.005,
     "gpt-4o-mini": 0.00015,
+    "gpt-4-turbo": 0.01,
+    "gpt-3.5-turbo": 0.0015,
+    # Google
     "gemini-2.0-flash": 0.000375,
+    "gemini-2.5-pro": 0.0035,
+    "gemini-1.5-pro": 0.0035,
+    "gemini-1.5-flash": 0.0001875,
+    # 国产模型（估算，以官方为准）
+    "qwen-max": 0.004,
+    "qwen-plus": 0.0008,
+    "deepseek-chat": 0.00027,
+    "deepseek-reasoner": 0.0011,
+    "glm-4-plus": 0.005,
 }
+
+
+def auto_detect_model() -> str:
+    """自动检测当前使用的模型（按优先级）"""
+    # 1. 检查环境变量
+    for env_var in ["ANTHROPIC_MODEL", "OPENAI_MODEL", "GEMINI_MODEL", "MODEL"]:
+        val = os.environ.get(env_var, "")
+        if val:
+            return val
+
+    # 2. 尝试从 headroom 配置读取
+    config_paths = [
+        Path.home() / ".headroom" / "config.json",
+        Path.home() / ".workbuddy" / "headroom_config.json",
+    ]
+    for p in config_paths:
+        if p.exists():
+            try:
+                cfg = json.loads(p.read_text())
+                if cfg.get("model"):
+                    return cfg["model"]
+            except Exception:
+                pass
+
+    # 3. 默认返回 claude-sonnet-4
+    return "claude-sonnet-4"
 
 
 def get_headroom_db_path() -> Path:
@@ -150,7 +193,7 @@ def generate_demo_data() -> list[dict]:
 # 2. 分析层：计算指标
 # ─────────────────────────────────────────
 
-def compute_metrics(stats: list[dict], model: str, pricing_per_1k: float) -> dict:
+def compute_metrics(stats: list[dict], model: str, pricing_per_1k: float, cny_rate: float = 7.2) -> dict:
     """计算汇总指标"""
     if not stats:
         return {}
@@ -181,12 +224,13 @@ def compute_metrics(stats: list[dict], model: str, pricing_per_1k: float) -> dic
         "total_saved": total_saved,
         "savings_pct": round(savings_pct, 1),
         "cost_saved_usd": round(cost_saved, 4),
-        "cost_saved_cny": round(cost_saved * 7.2, 2),
+        "cost_saved_cny": round(cost_saved * cny_rate, 2),
         "avg_compression_rate": round(1.0 - total_compressed / total_original, 2) if total_original else 0,
         "by_scenario": by_scenario,
         "scenario_rates": scenario_rates,
         "model": model,
         "pricing_per_1k": pricing_per_1k,
+        "cny_rate": cny_rate,
     }
 
 
@@ -255,7 +299,7 @@ def generate_html_dashboard(stats: list[dict], metrics: dict, output_path: Path)
 <body>
 
 <h1>📊 headroom 压缩效果监控面板</h1>
-<p class="subtitle">模型：{metrics.get('model', 'N/A')}｜定价：${metrics.get('pricing_per_1k', 0)}/1K tokens｜数据时段：最近 {metrics.get('total_sessions', 0)} 次压缩</p>
+<p class="subtitle">模型：{metrics.get('model', 'N/A')}｜定价：${metrics.get('pricing_per_1k', 0)}/1K tokens｜汇率：1 USD = {metrics.get('cny_rate', 7.2)} CNY｜数据时段：最近 {metrics.get('total_sessions', 0)} 次压缩</p>
 
 <!-- KPI 卡片 -->
 <div class="grid">
@@ -377,22 +421,37 @@ def main():
     parser = argparse.ArgumentParser(description="headroom 压缩效果可视化监控面板")
     parser.add_argument("--db", type=str, default=str(get_headroom_db_path()),
                         help="headroom CCR 数据库路径（默认：~/.headroom/ccr.db）")
-    parser.add_argument("--model", type=str, default="claude-sonnet-4",
-                        help="模型名称（用于定价计算）")
+    parser.add_argument("--model", type=str, default=None,
+                        help="模型名称（用于定价计算，默认自动检测）")
     parser.add_argument("--pricing", type=float, default=None,
                         help="自定义定价（USD/1K tokens），覆盖默认表")
     parser.add_argument("--output", type=str, default="headroom_dashboard.html",
                         help="输出 HTML 文件路径")
+    parser.add_argument("--cny-rate", type=float, default=7.2,
+                        help="USD→CNY 汇率（默认 7.2）")
     args = parser.parse_args()
 
-    # 解析定价
-    pricing = args.pricing if args.pricing else DEFAULT_PRICING.get(args.model, 0.015)
+    # 自动检测模型
+    model = args.model or auto_detect_model()
+    print(f"📌 使用模型：{model}")
+
+    # 解析定价（优先 --pricing > 内置表 > 默认 0.015）
+    if args.pricing:
+        pricing = args.pricing
+        print(f"   使用自定义定价：${pricing}/1K tokens")
+    elif model in DEFAULT_PRICING:
+        pricing = DEFAULT_PRICING[model]
+        print(f"   使用内置定价：${pricing}/1K tokens")
+    else:
+        pricing = 0.015
+        print(f"   ⚠️ 模型 {model} 不在内置定价表中，使用默认 $0.015/1K tokens")
+        print(f"   💡 提示：用 --pricing 指定定价，或提交 PR 更新定价表")
 
     print(f"📊 正在读取数据：{args.db}")
     stats = load_compression_stats(Path(args.db))
     print(f"   加载到 {len(stats)} 条压缩记录")
 
-    metrics = compute_metrics(stats, args.model, pricing)
+    metrics = compute_metrics(stats, model, pricing, args.cny_rate)
     print(f"   平均压缩率：{int(metrics.get('avg_compression_rate', 0)*100)}%")
     print(f"   估算节省：¥{metrics.get('cost_saved_cny', 0)}")
 
